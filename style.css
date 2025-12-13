@@ -139,37 +139,6 @@ body {
   overflow-y: auto;
 }
 
-/* Tabs */
-
-.view-tabs {
-  display: flex;
-  gap: 6px;
-  margin-bottom: 8px;
-}
-
-.view-tab {
-  flex: 0 0 auto;
-  padding: 6px 10px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #fff;
-  font-size: 0.8rem;
-  cursor: pointer;
-}
-
-.view-tab.active {
-  background: var(--accent);
-  color: #fff;
-  border-color: var(--accent);
-}
-
-.view-panel {
-  display: none;
-}
-
-.view-panel.is-active {
-  display: block;
-}
 
 /* Section */
 

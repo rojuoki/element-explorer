@@ -2032,11 +2032,6 @@ function setupMobileLayout() {
   detailSection.style.width = "100%";
   detailSection.style.marginTop = "8px";
 
-  // スマホでは「全元素ビュー / 金属ビュー」のタブを非表示にする
-  const allTab = document.getElementById("tabAll");
-  if (allTab && allTab.parentElement) {
-    allTab.parentElement.style.display = "none";
-  }
 }
 
 // ===============================
@@ -2046,11 +2041,10 @@ function init() {
   renderElementList(ELEMENTS_DATA);
   renderPeriodicTable();
   attachSearchHandler();
-  attachTabHandlers();
   attachLangToggle();
   initPriceChart();
   loadPriceData();
-  setupPriceToggle(); // ★これを追加（チャート開閉が効くようになる）
+  setupPriceToggle();
 
   // スマホ用レイアウト調整
   setupMobileLayout();
@@ -2297,28 +2291,35 @@ function updatePriceUI(el) {
   const priceDeltaEl = document.getElementById("priceDelta");
   const priceMetaEl = document.getElementById("priceMeta");
 
-  const priceToggle = document.getElementById("priceToggle");
+  const priceDetails = document.getElementById("priceDetails"); // 旧(details)方式が残っていても壊さない
+  const priceToggle = document.getElementById("priceToggle");   // 現行(▽)方式
   const priceChartRow = document.getElementById("priceChartRow");
   const priceChartWrap = document.getElementById("priceChartWrap");
 
   const hideChartUI = () => {
+    // details方式
+    if (priceDetails) {
+      priceDetails.open = false;
+      priceDetails.hidden = true;
+    }
+    // row方式
+    if (priceChartRow) priceChartRow.hidden = true;
+    // wrap方式（rowが無い場合のフォールバック）
+    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
+
     if (priceToggle) {
       priceToggle.hidden = true;
       priceToggle.setAttribute("aria-expanded", "false");
       priceToggle.classList.remove("is-open");
     }
-    if (priceChartRow) priceChartRow.hidden = true;
-    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
   };
 
   const closeChartUI = () => {
+    // 表示はするが閉じる（初期折りたたみ）
     if (priceToggle) {
       priceToggle.hidden = false;
-      priceToggle.setAttribute("aria-expanded", "false");
       priceToggle.classList.remove("is-open");
     }
-    if (priceChartRow) priceChartRow.hidden = true;
-    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
   };
 
   // データなし
@@ -2337,20 +2338,27 @@ function updatePriceUI(el) {
       ? `（${last.date}）`
       : `（${last.date} 年平均）`;
   }
+
   if (priceDeltaEl) setDelta(priceDeltaEl, last.price, prev?.price);
 
   // 年足しかない → チャートは使えない
   if (!isMonthlySeries(points)) {
+    closeChartUI(); // 最新値表示はするが、チャートUIは隠す
+    // “チャートUIそのものを消す”要件なら hideChartUI() に差し替え
     if (priceToggle) priceToggle.hidden = true;
-    if (priceChartRow) priceChartRow.hidden = true;
-    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
+    if (priceDetails) priceDetails.hidden = true;
     return;
   }
 
   // 月足あり → チャート利用可（初期は閉じる）
-  closeChartUI();
+  if (priceDetails) {
+    priceDetails.hidden = false;
+    priceDetails.open = false;
+  }
+  if (priceToggle) priceToggle.hidden = false;
+  if (priceChartRow) priceChartRow.hidden = true;
+  if (priceChartWrap && !priceChartRow && !priceDetails) priceChartWrap.hidden = true;
 }
-
 
 function updatePriceChart(el) {
   if (!priceChart) return;
@@ -2474,33 +2482,19 @@ function setDelta(elDelta, lastPrice, prevPrice) {
   }
 }
 
-
 function setupPriceToggle() {
   const toggle = document.getElementById("priceToggle");
   const row = document.getElementById("priceChartRow");
-  const wrap = document.getElementById("priceChartWrap");
 
-  // 旧HTML(wrap方式)だけの可能性もあるので、row が無い場合は wrap を開閉対象にする
-  if (!toggle || (!row && !wrap)) return;
-
-  // spanでもクリックできるようにアクセシビリティ属性を付与
-  toggle.setAttribute("role", "button");
-  toggle.setAttribute("tabindex", "0");
-  if (!toggle.hasAttribute("aria-expanded")) toggle.setAttribute("aria-expanded", "false");
+  if (!toggle || !row) return;
 
   const setOpen = (open) => {
+    row.hidden = !open;
     toggle.setAttribute("aria-expanded", String(open));
-    toggle.classList.toggle("is-open", open);
 
-    if (row) {
-      row.hidden = !open;
-    } else if (wrap) {
-      wrap.hidden = !open;
-    }
-
-    // Chart.js は hidden→表示でサイズ0になり得るので、開いた直後に resize
-    if (open && priceChart && typeof priceChart.resize === "function") {
-      priceChart.resize();
+    // Chart.js は非表示→表示でサイズ0になることがあるため
+    if (open && window.priceChart && typeof window.priceChart.resize === "function") {
+      window.priceChart.resize();
     }
   };
 
@@ -2520,6 +2514,42 @@ function setupPriceToggle() {
   // 初期状態：閉じる
   setOpen(false);
 }
+
+function getLatestAndPrev(points) {
+  if (!points || points.length === 0) return null;
+
+  const last = points[points.length - 1];
+  const prev = points.length >= 2 ? points[points.length - 2] : null;
+
+  return { last, prev };
+}
+function isMonthlySeries(points) {
+  if (!points || points.length === 0) return false;
+  return String(points[0].date).includes("-");
+}
+function setDelta(elDelta, lastPrice, prevPrice) {
+  if (prevPrice == null) {
+    elDelta.textContent = "";
+    elDelta.className = "delta neutral";
+    return;
+  }
+  const diff = lastPrice - prevPrice;
+  const abs = Math.abs(diff);
+
+  if (diff > 0) {
+    elDelta.textContent = `▲ +${abs.toLocaleString()}`;
+    elDelta.className = "delta up";
+  } else if (diff < 0) {
+    elDelta.textContent = `▼ -${abs.toLocaleString()}`;
+    elDelta.className = "delta down";
+  } else {
+    elDelta.textContent = `±0`;
+    elDelta.className = "delta neutral";
+  }
+}
+
+
+
 // ===============================
 // 検索
 // ===============================
@@ -2550,31 +2580,6 @@ function attachSearchHandler() {
   });
 }
 
-// ===============================
-// タブ切り替え
-// ===============================
-function attachTabHandlers() {
-  const tabAll = document.getElementById("tabAll");
-  const tabMetals = document.getElementById("tabMetals");
-  const allView = document.getElementById("allView");
-  const metalView = document.getElementById("metalView");
-
-  if (!tabAll || !tabMetals || !allView || !metalView) return;
-
-  tabAll.addEventListener("click", () => {
-    allView.classList.add("is-active");
-    metalView.classList.remove("is-active");
-    tabAll.classList.add("active");
-    tabMetals.classList.remove("active");
-  });
-
-  tabMetals.addEventListener("click", () => {
-    metalView.classList.add("is-active");
-    allView.classList.remove("is-active");
-    tabMetals.classList.add("active");
-    tabAll.classList.remove("active");
-  });
-}
 
 // ===============================
 // 実行

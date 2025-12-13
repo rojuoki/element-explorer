@@ -1658,7 +1658,7 @@ const ELEMENTS_DATA = [
     density: null,
     melting_c: null,
     boiling_c: null
-  },
+  }
 ];
 
 // ===============================
@@ -1730,9 +1730,10 @@ const EXTRA_DETAILS = {
     ionization_energy_kj_mol: 890
   }
 };
-// 用途・特徴・歴史などのテキスト（とりあえず主要金属だけ）
+
+// 用途・特徴・歴史などのテキスト
 const EXTRA_TEXT = {
-  26: { // Fe 鉄
+  26: {
     usage:
       "鉄は建築材料、橋梁、自動車、船舶など、構造材料として最も広く利用される金属です。炭素などと合金化した鋼として使われることが多く、強度と加工性のバランスを調整できます。",
     feature:
@@ -1742,7 +1743,7 @@ const EXTRA_TEXT = {
     notice:
       "鉄そのものは日常的に触れても問題ありませんが、錆びた鉄片はけがや破傷風のリスクになるため取り扱いには注意が必要です。"
   },
-  13: { // Al アルミニウム
+  13: {
     usage:
       "アルミニウムは軽量で耐食性が高く、輸送機器、建材、飲料缶、電子機器の筐体などに広く利用されています。熱伝導性も良く、ヒートシンクや調理器具にも使われます。",
     feature:
@@ -1752,7 +1753,7 @@ const EXTRA_TEXT = {
     notice:
       "一般的な使用では安全性の高い金属ですが、高温での溶融や粉末の取り扱いなど、工業用途では専用の安全対策が必要です。"
   },
-  29: { // Cu 銅
+  29: {
     usage:
       "非常に高い電気伝導性を持ち、電線や配線、モーター巻線、プリント基板などの電気・電子分野で広く利用されています。また、水道管や熱交換器など配管・熱関連用途にも使われます。",
     feature:
@@ -1762,7 +1763,7 @@ const EXTRA_TEXT = {
     notice:
       "通常の金属状態では安全性が高い一方、溶融状態や粉末状では高温・発火の危険を伴うことがあり、産業現場では適切な安全管理が求められます。"
   },
-  79: { // Au 金
+  79: {
     usage:
       "主に装飾品や貴金属として利用されるほか、優れた電気伝導性と耐食性を活かして、コネクタやICパッケージなど高信頼性が求められる電子部品にも用いられます。",
     feature:
@@ -1771,9 +1772,18 @@ const EXTRA_TEXT = {
       "古代から価値の象徴として扱われ、貨幣・装飾品・宗教的な工芸品などに広く用いられてきました。現在も価値保存資産や投資対象として重要な役割を持ちます。",
     notice:
       "通常の使用では安全な金属ですが、高価なため盗難や偽造品に関する注意が必要です。投資商品として扱う場合は、信頼できる業者や保管方法の確認が重要です。"
+  },
+  50: {
+    usage:
+      "スズは主にはんだ材料、錫メッキ、ブリキ鋼板（缶詰など）として利用されます。また、青銅やはんだ合金など、多くの合金の成分としても重要です。",
+    feature:
+      "融点が比較的低く（約232℃）、鉛と比較して毒性が低いため、鉛フリーはんだ材料としても広く利用されています。表面が酸化しても比較的安定な皮膜を作ります。",
+    history:
+      "古代から銅との合金である青銅の成分として利用され、『青銅器時代』を支えた金属の一つです。現代では電子機器の鉛フリーはんだとしての役割が大きくなっています。",
+    notice:
+      "食品用の缶詰などに用いられるスズメッキ鋼板は、適切に管理されていれば安全ですが、腐食が進んだ場合には金属溶出に注意が必要です。電子機器の鉛フリー化に伴い、スズを多く含むはんだでは『ウィスカ』と呼ばれる細い金属結晶が伸びる問題があり、信頼性設計が必要です。"
   }
 };
-
 
 // EXTRA_DETAILS を ELEMENTS_DATA にマージ
 ELEMENTS_DATA.forEach((el) => {
@@ -1783,19 +1793,102 @@ ELEMENTS_DATA.forEach((el) => {
 });
 
 // ===============================
-// テスト用価格データ（ダミー）
-// ===============================
-// ===============================
 // 価格データ（JSON を読み込み）
 // ===============================
 
 // JSON から読み込んだ価格データを入れておく箱
+// 形式: { "Cu": [{ date: "1990M1", price: 123 }, ... ], "Al": [...], ... }
 let PRICE_DATA = {};
+
+// IMF の "1990M1" 形式から「年」だけ取り出すヘルパー
+function getYearFromIMFDate(dateStr) {
+  if (!dateStr || dateStr.length < 4) return null;
+  const y = parseInt(dateStr.slice(0, 4), 10);
+  return Number.isNaN(y) ? null : y;
+}
+
+// 年セレクタを埋める
+function setupYearSelectors() {
+  if (!PRICE_DATA || !Object.keys(PRICE_DATA).length) {
+    console.warn("価格データがまだ読み込まれていません");
+    return;
+  }
+
+  let minY = Infinity;
+  let maxY = -Infinity;
+
+  // すべての金属のデータから最小年・最大年を探す
+  Object.values(PRICE_DATA).forEach((rows) => {
+    if (!Array.isArray(rows)) return;
+    rows.forEach((p) => {
+      const y = getYearFromIMFDate(p.date);
+      if (y == null) return;
+      if (y < minY) minY = y;
+      if (y > maxY) maxY = y;
+    });
+  });
+
+  if (!isFinite(minY) || !isFinite(maxY)) {
+    console.warn("年情報が取得できませんでした");
+    return;
+  }
+
+  if (priceFromYearEl) priceFromYearEl.innerHTML = "";
+  if (priceToYearEl) priceToYearEl.innerHTML = "";
+
+  for (let y = minY; y <= maxY; y++) {
+    if (priceFromYearEl) {
+      const optFrom = document.createElement("option");
+      optFrom.value = String(y);
+      optFrom.textContent = String(y);
+      priceFromYearEl.appendChild(optFrom);
+    }
+    if (priceToYearEl) {
+      const optTo = document.createElement("option");
+      optTo.value = String(y);
+      optTo.textContent = String(y);
+      priceToYearEl.appendChild(optTo);
+    }
+  }
+
+  currentFromYear = minY;
+  currentToYear = maxY;
+  if (priceFromYearEl) priceFromYearEl.value = String(minY);
+  if (priceToYearEl) priceToYearEl.value = String(maxY);
+}
+
+// 粒度と期間のコントロールにイベントを付ける
+function setupPriceControls() {
+  if (priceGranularityEl) {
+    priceGranularityEl.addEventListener("change", () => {
+      currentGranularity = priceGranularityEl.value; // "month" or "year"
+      const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
+      if (el) updatePriceChart(el);
+    });
+  }
+
+  const onYearChange = () => {
+    if (priceFromYearEl) {
+      const v = parseInt(priceFromYearEl.value, 10);
+      currentFromYear = Number.isNaN(v) ? null : v;
+    }
+    if (priceToYearEl) {
+      const v = parseInt(priceToYearEl.value, 10);
+      currentToYear = Number.isNaN(v) ? null : v;
+    }
+    const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
+    if (el) updatePriceChart(el);
+  };
+
+  if (priceFromYearEl) priceFromYearEl.addEventListener("change", onYearChange);
+  if (priceToYearEl) priceToYearEl.addEventListener("change", onYearChange);
+}
 
 // 価格データを JSON ファイルから読み込む
 function loadPriceData() {
-  // JSON ファイル名（プロジェクト直下に置いたもの）
-  const url = "./all_metals_with_prices_1year.json";
+  // ★ あなたの JSON ファイル名に合わせてね
+  // 例: "./metal_prices.json"
+  const url = "./metal_prices.json";
 
   fetch(url)
     .then((res) => {
@@ -1806,7 +1899,10 @@ function loadPriceData() {
     })
     .then((json) => {
       PRICE_DATA = json;
-      // いま選択中の元素でチャートを更新
+
+      setupYearSelectors();
+      setupPriceControls();
+
       const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
       if (el) {
         updatePriceChart(el);
@@ -1854,6 +1950,7 @@ const infoElectronegativityEl = document.getElementById(
 );
 const infoAtomicRadiusEl = document.getElementById("infoAtomicRadius");
 const infoIonizationEnergyEl = document.getElementById("infoIonizationEnergy");
+
 // 詳細テキスト（用途・特徴など）
 const textUsageEl = document.getElementById("textUsage");
 const textFeatureEl = document.getElementById("textFeature");
@@ -1867,6 +1964,15 @@ const appSubtitleEl = document.getElementById("appSubtitle");
 let priceChart = null;
 let currentAtomicNumber = 1;
 let currentLang = "ja"; // "ja" or "en"
+let currentGranularity = "month"; // "month" or "year"
+let currentFromYear = null; // 数値 or null
+let currentToYear = null; // 数値 or null
+
+// 価格チャート用コントロール
+const priceRangeEl = document.getElementById("priceRange"); // 使っていなくても OK
+const priceGranularityEl = document.getElementById("priceGranularity");
+const priceFromYearEl = document.getElementById("priceFromYear");
+const priceToYearEl = document.getElementById("priceToYear");
 
 // ===============================
 // 分類 → CSS クラス
@@ -1883,6 +1989,7 @@ function categoryToClass(category) {
   if (category === "希ガス") return "noble-gas";
   return "";
 }
+
 // スマホ版レイアウト調整（幅 768px 以下）
 function setupMobileLayout() {
   // PCサイズのときは何もしない
@@ -1943,13 +2050,14 @@ function init() {
   attachLangToggle();
   initPriceChart();
   loadPriceData();
-  // ★ ここでスマホ用レイアウトに並び替え＆周期表を非表示
+  setupPriceToggle(); // ★これを追加（チャート開閉が効くようになる）
+
+  // スマホ用レイアウト調整
   setupMobileLayout();
 
   selectElement(1);
   applyLanguage();
 }
-
 
 // ===============================
 // サイドバーリスト
@@ -1967,9 +2075,8 @@ function renderElementList(data) {
 }
 
 // ===============================
-// 元素表（本物レイアウト）
-// ===============================
 // 元素表（本物レイアウト＋下2段方式）
+// ===============================
 function renderPeriodicTable() {
   periodicEl.innerHTML = "";
 
@@ -1978,18 +2085,16 @@ function renderPeriodicTable() {
     let row = el.period;
     let col = el.group;
 
-    // --- ランタノイド（57〜71）：下から1段目に並べる ---
-    // La を列4に置き、Lu が列18になるように配置
+    // ランタノイド（57〜71）：下から1段目に並べる
     if (el.n >= 57 && el.n <= 71) {
-      row = 9;                       // 「第9行」に表示（見た目用）
-      col = 4 + (el.n - 57);         // 57→4, 58→5, ... 71→18
+      row = 9;
+      col = 4 + (el.n - 57); // 57→4, 71→18
     }
 
-    // --- アクチノイド（89〜103）：下から2段目に並べる ---
-    // Ac を列4に置き、Lr が列18になるように配置
+    // アクチノイド（89〜103）：下から2段目に並べる
     if (el.n >= 89 && el.n <= 103) {
-      row = 10;                       // 「第10行」に表示（見た目用）
-      col = 4 + (el.n - 89);         // 89→4, 90→5, ... 103→18
+      row = 10;
+      col = 4 + (el.n - 89); // 89→4, 103→18
     }
 
     const cell = document.createElement("button");
@@ -1997,15 +2102,11 @@ function renderPeriodicTable() {
     cell.className = "periodic-cell";
     cell.dataset.n = String(el.n);
 
-    // 分類に応じて色クラスを付与
     const cls = categoryToClass(el.category || "");
     if (cls) cell.classList.add(cls);
-    // ランタノイド・アクチノイド行用のクラス
-if (el.n >= 57 && el.n <= 71) cell.classList.add("lanthanoid-row");
-if (el.n >= 89 && el.n <= 103) cell.classList.add("actinoid-row");
+    if (el.n >= 57 && el.n <= 71) cell.classList.add("lanthanoid-row");
+    if (el.n >= 89 && el.n <= 103) cell.classList.add("actinoid-row");
 
-
-    // グリッド上の位置
     if (col != null && row != null) {
       cell.style.gridColumn = col;
       cell.style.gridRow = row;
@@ -2018,7 +2119,6 @@ if (el.n >= 89 && el.n <= 103) cell.classList.add("actinoid-row");
 
     cell.addEventListener("click", () => {
       selectElement(el.n, false);
-
       const detail = document.querySelector(".detail-section");
       if (detail) {
         detail.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -2030,7 +2130,6 @@ if (el.n >= 89 && el.n <= 103) cell.classList.add("actinoid-row");
 
   updateActiveStates();
 }
-
 
 // ===============================
 // 言語トグル
@@ -2045,15 +2144,12 @@ function attachLangToggle() {
 }
 
 function applyLanguage() {
-  // HTML lang
   document.documentElement.lang = currentLang === "ja" ? "ja" : "en";
 
-  // ボタン表示
   if (langToggleEl) {
     langToggleEl.textContent = currentLang === "ja" ? "EN" : "日本語";
   }
 
-  // サブタイトル
   if (appSubtitleEl) {
     appSubtitleEl.textContent =
       currentLang === "ja"
@@ -2061,7 +2157,6 @@ function applyLanguage() {
         : "All elements view + Metals view (MVP)";
   }
 
-  // 現在選択中のカードの名前表示
   const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
   if (el) {
     if (currentLang === "ja") {
@@ -2080,7 +2175,6 @@ function selectElement(atomicNumber, fromList) {
   const el = ELEMENTS_DATA.find((e) => e.n === atomicNumber);
   if (!el) return;
 
-  // カード
   if (currentLang === "ja") {
     cardNamesEl.textContent = `${el.ja} / ${el.en}`;
   } else {
@@ -2089,7 +2183,6 @@ function selectElement(atomicNumber, fromList) {
   cardAtomicNumberEl.textContent = el.n;
   cardSymbolEl.textContent = el.s;
 
-  // 詳細
   infoAtomicNumberEl.textContent = el.n;
   infoSymbolEl.textContent = el.s;
   infoNameJaEl.textContent = el.ja;
@@ -2105,7 +2198,6 @@ function selectElement(atomicNumber, fromList) {
   infoBoilingEl.textContent =
     el.boiling_c != null ? `${el.boiling_c} ℃` : "-";
 
-  // 追加の詳細（なければ "-"）
   infoElectronConfigEl.textContent = el.electron_config || "-";
   infoShellEl.textContent = el.shell || "-";
   infoOxidationEl.textContent = el.oxidation_states || "-";
@@ -2117,7 +2209,7 @@ function selectElement(atomicNumber, fromList) {
     el.ionization_energy_kj_mol != null
       ? `${el.ionization_energy_kj_mol}`
       : "-";
-        // 用途・特徴・歴史などのテキスト
+
   const extraText = EXTRA_TEXT[el.n] || {};
   textUsageEl.textContent =
     extraText.usage || "この元素の主な用途は準備中です。";
@@ -2128,8 +2220,7 @@ function selectElement(atomicNumber, fromList) {
   textNoticeEl.textContent =
     extraText.notice ||
     "この元素に関する注意点や関連情報は今後追加していけます。";
-
-
+  updatePriceUI(el);
   updatePriceChart(el);
   updateActiveStates();
 
@@ -2162,7 +2253,7 @@ function updateActiveStates() {
 }
 
 // ===============================
-// 価格チャート
+// 価格チャート初期化
 // ===============================
 function initPriceChart() {
   const canvas = document.getElementById("priceChart");
@@ -2195,33 +2286,240 @@ function initPriceChart() {
   });
 }
 
-function updatePriceChart(el) {
-  if (!priceChart) return;
-
+// ===============================
+// 価格チャート更新（粒度＋期間対応版）
+// ===============================
+function updatePriceUI(el) {
   const symbol = el.s;
-  const priceData = PRICE_DATA[symbol]; // ← JSON から読み込んだデータを使用
+  const points = PRICE_DATA[symbol];
 
-  if (!priceData) {
-    priceChart.data.labels = [];
-    priceChart.data.datasets[0].data = [];
-    priceChart.update();
-    priceMessageEl.textContent =
-      "この元素の価格データはまだ登録されていません。";
+  const priceLatestEl = document.getElementById("priceLatest");
+  const priceDeltaEl = document.getElementById("priceDelta");
+  const priceMetaEl = document.getElementById("priceMeta");
+
+  const priceToggle = document.getElementById("priceToggle");
+  const priceChartRow = document.getElementById("priceChartRow");
+  const priceChartWrap = document.getElementById("priceChartWrap");
+
+  const hideChartUI = () => {
+    if (priceToggle) {
+      priceToggle.hidden = true;
+      priceToggle.setAttribute("aria-expanded", "false");
+      priceToggle.classList.remove("is-open");
+    }
+    if (priceChartRow) priceChartRow.hidden = true;
+    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
+  };
+
+  const closeChartUI = () => {
+    if (priceToggle) {
+      priceToggle.hidden = false;
+      priceToggle.setAttribute("aria-expanded", "false");
+      priceToggle.classList.remove("is-open");
+    }
+    if (priceChartRow) priceChartRow.hidden = true;
+    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
+  };
+
+  // データなし
+  if (!points || points.length === 0) {
+    if (priceLatestEl) priceLatestEl.textContent = "-";
+    if (priceDeltaEl) priceDeltaEl.textContent = "";
+    if (priceMetaEl) priceMetaEl.textContent = "（データなし）";
+    hideChartUI();
     return;
   }
 
-  const labels = priceData.map((p) => p.date);
-  const values = priceData.map((p) => p.price);
+  const { last, prev } = getLatestAndPrev(points);
+  if (priceLatestEl) priceLatestEl.textContent = `${last.price.toLocaleString()} USD`;
+  if (priceMetaEl) {
+    priceMetaEl.textContent = isMonthlySeries(points)
+      ? `（${last.date}）`
+      : `（${last.date} 年平均）`;
+  }
+  if (priceDeltaEl) setDelta(priceDeltaEl, last.price, prev?.price);
+
+  // 年足しかない → チャートは使えない
+  if (!isMonthlySeries(points)) {
+    if (priceToggle) priceToggle.hidden = true;
+    if (priceChartRow) priceChartRow.hidden = true;
+    if (priceChartWrap && !priceChartRow) priceChartWrap.hidden = true;
+    return;
+  }
+
+  // 月足あり → チャート利用可（初期は閉じる）
+  closeChartUI();
+}
+
+
+function updatePriceChart(el) {
+  if (!priceChart) return;
+
+  const points = PRICE_DATA[el.s];
+  if (!points || points.length === 0) return;
+
+  // 年足しかないならチャート描かない
+  if (!isMonthlySeries(points)) return;
+
+  // ここから先は今のロジック
+  const symbol = el.s;
+  const priceData = PRICE_DATA[symbol]; // JSON から読み込んだ IMF ベースの価格データ
+
+  if (!priceData || priceData.length === 0) {
+    priceChart.data.labels = [];
+    priceChart.data.datasets[0].data = [];
+    priceChart.update();
+    if (priceMessageEl) {
+      priceMessageEl.textContent =
+        "この元素の価格データは IMF データベースに見つかりませんでした。";
+    }
+    return;
+  }
+
+  // 期間フィルタ（currentFromYear〜currentToYear）
+  let rows = priceData.slice();
+  const defaultFromYear = getYearFromIMFDate(rows[0].date);
+  const defaultToYear = getYearFromIMFDate(rows[rows.length - 1].date);
+
+  const fromY =
+    currentFromYear != null ? currentFromYear : defaultFromYear;
+  const toY = currentToYear != null ? currentToYear : defaultToYear;
+
+  rows = rows.filter((p) => {
+    const y = getYearFromIMFDate(p.date);
+    return y != null && y >= fromY && y <= toY;
+  });
+
+  let labels = [];
+  let values = [];
+  let labelSuffix = "";
+
+  if (currentGranularity === "year") {
+    // 年足：年平均を作る
+    const byYear = new Map(); // year -> {sum, count}
+
+    rows.forEach((p) => {
+      const y = getYearFromIMFDate(p.date);
+      if (y == null || p.price == null) return;
+      const rec = byYear.get(y) || { sum: 0, count: 0 };
+      rec.sum += p.price;
+      rec.count += 1;
+      byYear.set(y, rec);
+    });
+
+    const years = Array.from(byYear.keys()).sort((a, b) => a - b);
+    labels = years.map((y) => String(y));
+    values = years.map((y) => {
+      const r = byYear.get(y);
+      return r.count ? r.sum / r.count : null;
+    });
+    labelSuffix = "（IMF 年平均価格）";
+  } else {
+    // 月足：そのまま
+    labels = rows.map((p) => p.date);
+    values = rows.map((p) => p.price);
+    labelSuffix = "（IMF 月次価格）";
+  }
 
   priceChart.data.labels = labels;
   priceChart.data.datasets[0].data = values;
-  priceChart.data.datasets[0].label = `${el.ja}（ダミー価格）`;
+  priceChart.data.datasets[0].label = `${el.ja}${labelSuffix}`;
   priceChart.update();
 
-  priceMessageEl.textContent =
-    "※ 表示されているのはテスト用のダミーデータです。実運用では JSON から最新価格を読み込みます。";
+  if (priceMessageEl) {
+    priceMessageEl.textContent =
+      "この元素の価格データは IMF Primary Commodity Prices（月次／年平均, USドル建て）を元にしています。";
+  }
+}
+function getLatestAndPrev(points) {
+  // points: [{date, price}, ...]  date昇順想定。違うならソートする
+  if (!points || points.length === 0) return null;
+
+  const last = points[points.length - 1];
+  const prev = points.length >= 2 ? points[points.length - 2] : null;
+
+  return { last, prev };
 }
 
+function isMonthlySeries(points) {
+  // dateが "YYYY-Mx" / "YYYY-MM" を想定
+  // 年足しかないなら "YYYY" だけ、などで判定
+  if (!points || points.length === 0) return false;
+  return String(points[0].date).includes("-");
+}
+
+function formatNumber(n) {
+  if (n == null || Number.isNaN(n)) return "-";
+  return n.toLocaleString(undefined, { maximumFractionDigits: 2 });
+}
+
+function setDelta(elDelta, lastPrice, prevPrice) {
+  if (prevPrice == null) {
+    elDelta.textContent = "";
+    elDelta.className = "delta neutral";
+    return;
+  }
+  const diff = lastPrice - prevPrice;
+  const abs = Math.abs(diff);
+
+  if (diff > 0) {
+    elDelta.textContent = `▲ +${formatNumber(abs)}`;
+    elDelta.className = "delta up";
+  } else if (diff < 0) {
+    elDelta.textContent = `▼ -${formatNumber(abs)}`;
+    elDelta.className = "delta down";
+  } else {
+    elDelta.textContent = `±0`;
+    elDelta.className = "delta neutral";
+  }
+}
+
+
+function setupPriceToggle() {
+  const toggle = document.getElementById("priceToggle");
+  const row = document.getElementById("priceChartRow");
+  const wrap = document.getElementById("priceChartWrap");
+
+  // 旧HTML(wrap方式)だけの可能性もあるので、row が無い場合は wrap を開閉対象にする
+  if (!toggle || (!row && !wrap)) return;
+
+  // spanでもクリックできるようにアクセシビリティ属性を付与
+  toggle.setAttribute("role", "button");
+  toggle.setAttribute("tabindex", "0");
+  if (!toggle.hasAttribute("aria-expanded")) toggle.setAttribute("aria-expanded", "false");
+
+  const setOpen = (open) => {
+    toggle.setAttribute("aria-expanded", String(open));
+    toggle.classList.toggle("is-open", open);
+
+    if (row) {
+      row.hidden = !open;
+    } else if (wrap) {
+      wrap.hidden = !open;
+    }
+
+    // Chart.js は hidden→表示でサイズ0になり得るので、開いた直後に resize
+    if (open && priceChart && typeof priceChart.resize === "function") {
+      priceChart.resize();
+    }
+  };
+
+  toggle.addEventListener("click", () => {
+    const open = toggle.getAttribute("aria-expanded") === "true";
+    setOpen(!open);
+  });
+
+  toggle.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      const open = toggle.getAttribute("aria-expanded") === "true";
+      setOpen(!open);
+    }
+  });
+
+  // 初期状態：閉じる
+  setOpen(false);
+}
 // ===============================
 // 検索
 // ===============================

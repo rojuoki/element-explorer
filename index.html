@@ -6,45 +6,47 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <link rel="stylesheet" href="style.css" />
   </head>
+
   <body>
     <div class="app">
       <header class="app-header">
-<h1 class="app-title">
-  Element Explorer
-  <button id="langToggle" class="lang-toggle">EN</button>
-</h1>
-<p class="app-subtitle" id="appSubtitle">
-  全元素ビュー ＋ 金属ビュー（MVP）
-</p>
+        <h1 class="app-title">
+          Element Explorer
+          <button id="langToggle" class="lang-toggle" type="button">EN</button>
+        </h1>
+        <p class="app-subtitle" id="appSubtitle">全元素ビュー ＋ 金属ビュー（MVP）</p>
       </header>
 
       <div class="app-body">
-        <!-- サイドバー：元素一覧 -->
+        <!-- サイドバー -->
         <aside class="sidebar">
           <h2 class="sidebar-title">元素一覧</h2>
+
           <input
             id="elementSearch"
             class="search-input"
             type="search"
             placeholder="元素名 / 記号 / 番号で検索"
           />
-<div class="element-list-wrapper">
-  <ul id="elementList" class="element-list">
-    <!-- ここにLIが入る -->
-  </ul>
-</div>
+
+          <div class="element-list-wrapper">
+            <ul id="elementList" class="element-list"></ul>
+          </div>
         </aside>
 
         <!-- メイン -->
         <main class="main">
+          <!-- タブ（script.js が tabAll/tabMetals を参照） -->
+          <div class="view-tabs">
+            <button id="tabAll" class="view-tab active" type="button">全元素</button>
+            <button id="tabMetals" class="view-tab" type="button">金属</button>
+          </div>
 
           <!-- 全元素ビュー -->
           <section id="allView" class="view-panel is-active">
             <section class="periodic-section">
               <h2 class="section-title">元素表（本物レイアウト風）</h2>
-              <p class="section-note">
-                セルをクリックすると下の詳細カードが切り替わります。
-              </p>
+              <p class="section-note">セルをクリックすると下の詳細カードが切り替わります。</p>
               <div id="periodicTable" class="periodic-table"></div>
             </section>
           </section>
@@ -53,16 +55,13 @@
           <section id="metalView" class="view-panel">
             <section class="metal-section">
               <h2 class="section-title">金属ビュー（主要金属）</h2>
-              <p class="section-note">
-                金属だけの一覧です。クリックすると下の詳細・価格チャートが切り替わります。
-              </p>
+              <p class="section-note">金属だけの一覧です。クリックすると下の詳細・価格チャートが切り替わります。</p>
               <div id="metalPills" class="metal-pills"></div>
             </section>
           </section>
 
-          <!-- 共通：詳細カード ＋ 価格チャート -->
+          <!-- 詳細（共通） -->
           <section class="detail-section">
-            <!-- カード -->
             <div class="element-card">
               <div class="element-card-main">
                 <div id="cardSymbol" class="element-symbol">H</div>
@@ -71,7 +70,6 @@
               <div id="cardAtomicNumber" class="element-atomic">1</div>
             </div>
 
-            <!-- 詳細テーブル -->
             <div id="elementInfo" class="element-info">
               <table class="info-table">
                 <tbody>
@@ -143,55 +141,89 @@
                     <th>原子半径（約・pm）</th>
                     <td id="infoAtomicRadius">-</td>
                   </tr>
+
+                  <!-- ここ：第1イオン化エネルギーの直下に価格 -->
                   <tr>
                     <th>第1イオン化エネルギー<br />(kJ/mol)</th>
                     <td id="infoIonizationEnergy">-</td>
                   </tr>
+
+                  <!-- 価格（インライン ▾） -->
+                  <tr class="price-row">
+                    <th>価格</th>
+                    <td class="price-cell">
+                      <span id="priceLatest">-</span>
+                      <span id="priceDelta" class="delta neutral"></span>
+                      <span id="priceMeta" class="meta"></span>
+
+                      <!-- script.js が priceToggle を参照 -->
+                      <span
+                        id="priceToggle"
+                        class="price-caret"
+                        role="button"
+                        tabindex="0"
+                        aria-expanded="false"
+                        aria-controls="priceChartRow"
+                        aria-label="価格チャートを開閉"
+                        title="チャートを開閉"
+                      >▾</span>
+                    </td>
+                  </tr>
+
+                  <!-- チャート（全幅 row） -->
+                  <tr id="priceChartRow" hidden>
+                    <td colspan="2">
+                      <div id="priceChartWrap" class="price-chart-wrap">
+                        <div class="price-controls">
+                          粒度:
+                          <select id="priceGranularity">
+                            <option value="month" selected>月足</option>
+                            <option value="year">年足（年平均）</option>
+                          </select>
+
+                          開始年: <select id="priceFromYear"></select>
+                          終了年: <select id="priceToYear"></select>
+                        </div>
+
+                        <div class="price-chart-canvas">
+                          <canvas id="priceChart"></canvas>
+                        </div>
+
+                        <p id="priceMessage" class="price-message"></p>
+                      </div>
+                    </td>
+                  </tr>
                 </tbody>
               </table>
+
               <p class="info-note">
                 ※ 値は標準状態（25℃付近）の代表値（教科書レベル）を想定。未入力の項目は「-」で表示されます。
               </p>
             </div>
 
-            <!-- 価格チャート -->
-            <section class="price-section">
-              <h3 class="section-title small">価格チャート（テスト用ダミーデータ）</h3>
-              <p class="section-note">
-                銅・アルミ・鉄・金・銀・鉛 など、主要金属のみ表示対応（今はテスト用の仮データ）。
-              </p>
-              <div class="price-chart-wrapper">
-                <canvas id="priceChart"></canvas>
-                <p id="priceMessage" class="price-message"></p>
+            <section class="text-section">
+              <h3 class="section-title small">この元素について</h3>
+
+              <div class="text-block">
+                <h4>主な用途</h4>
+                <p id="textUsage">この元素の主な用途は準備中です。</p>
+              </div>
+
+              <div class="text-block">
+                <h4>性質・特徴</h4>
+                <p id="textFeature">この元素の性質や特徴は準備中です。</p>
+              </div>
+
+              <div class="text-block">
+                <h4>歴史・背景</h4>
+                <p id="textHistory">この元素の歴史や名前の由来などは準備中です。</p>
+              </div>
+
+              <div class="text-block">
+                <h4>注意点・関連情報</h4>
+                <p id="textNotice">この元素に関する注意点や、関連する製品・教材の情報を今後追加していけます。</p>
               </div>
             </section>
-                  <!-- 詳細テキスト：用途・特徴・歴史・注意など -->
-      <section class="text-section">
-        <h3 class="section-title small">この元素について</h3>
-
-        <div class="text-block">
-          <h4>主な用途</h4>
-          <p id="textUsage">この元素の主な用途は準備中です。</p>
-        </div>
-
-        <div class="text-block">
-          <h4>性質・特徴</h4>
-          <p id="textFeature">この元素の性質や特徴は準備中です。</p>
-        </div>
-
-        <div class="text-block">
-          <h4>歴史・背景</h4>
-          <p id="textHistory">この元素の歴史や名前の由来などは準備中です。</p>
-        </div>
-
-        <div class="text-block">
-          <h4>注意点・関連情報</h4>
-          <p id="textNotice">
-            この元素に関する注意点や、関連する製品・教材の情報を今後追加していけます。
-          </p>
-        </div>
-      </section>
-
           </section>
         </main>
       </div>
@@ -199,8 +231,8 @@
       <footer class="app-footer">Element Explorer © 2025</footer>
     </div>
 
-    <!-- Chart.js（価格チャート用） -->
-<script src="./chart.umd.js"></script>
+    <!-- Chart.js -->
+    <script src="./chart.umd.js"></script>
     <script src="script.js"></script>
   </body>
 </html>

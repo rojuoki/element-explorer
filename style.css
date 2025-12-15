@@ -447,3 +447,116 @@ body {
     height: 220px;
   }
 }
+.price-range {
+  display: inline-flex;
+  gap: 6px;
+  margin-left: 8px;
+}
+
+.range-btn {
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+.range-btn.is-active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+/* ===============================
+   詳細データ（B/C）
+=============================== */
+
+.more-section {
+  margin-top: 14px;
+  padding-top: 10px;
+  border-top: 1px solid #eee;
+}
+
+.more-tabs {
+  display: none; /* PCは非表示（スマホで表示） */
+  gap: 6px;
+  margin: 8px 0 10px;
+}
+
+.more-tab {
+  font-size: 12px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid #ddd;
+  background: #fff;
+  cursor: pointer;
+}
+
+.more-tab.is-active {
+  background: #007aff;
+  color: #fff;
+  border-color: #007aff;
+}
+
+.more-accordion {
+  border: 1px solid #eee;
+  border-radius: 12px;
+  padding: 8px 10px;
+  margin: 8px 0;
+  background: #fff;
+}
+
+.more-accordion summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.more-content {
+  padding-top: 8px;
+}
+
+.more-placeholder {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.more-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+.more-table th,
+.more-table td {
+  border-bottom: 1px solid #eee;
+  padding: 6px 4px;
+  text-align: left;
+}
+
+.more-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+}
+
+/* スマホ：タブ表示にする（detailsのsummaryを隠す） */
+@media (max-width: 768px) {
+  .more-tabs {
+    display: inline-flex;
+  }
+
+  .more-accordion summary {
+    display: none;
+  }
+
+  .more-accordion {
+    padding: 0;
+    border: none;
+    background: transparent;
+    margin: 0;
+  }
+
+  .more-content {
+    padding-top: 0;
+  }
+}

@@ -1,4 +1,209 @@
 // ===============================
+// IMF 価格系列 → 表示単位（事実ベース）
+// ===============================
+const PRICE_UNIT_BY_SYMBOL = {
+  // ベースメタル（USD / metric ton）
+  Cu: "USD / metric ton",
+  Al: "USD / metric ton",
+  Ni: "USD / metric ton",
+  Zn: "USD / metric ton",
+  Pb: "USD / metric ton",
+  Sn: "USD / metric ton",
+  Fe: "USD / metric ton",
+  Co: "USD / ton",
+  Mo: "USD / ton",
+
+  // 貴金属（USD / troy ounce）
+  Au: "USD / oz",
+  Ag: "USD / oz",
+  Pt: "USD / oz",
+  Pd: "USD / oz",
+};
+// ===============================
+// 詳細データ（B/C）遅延ロード
+// ===============================
+const MORE_CACHE = new Map(); // symbol -> json or null
+let moreLoadedSymbol = null;
+
+async function fetchMoreData(symbol) {
+  if (MORE_CACHE.has(symbol)) return MORE_CACHE.get(symbol);
+}
+function resetMoreUI() {
+  document.querySelectorAll(".more-accordion").forEach((d) => (d.open = false));
+  document.querySelectorAll("[data-more-content]").forEach((el) => {
+    el.innerHTML = `<p class="more-placeholder">（未読み込み）</p>`;
+  });
+
+  const tabs = document.querySelectorAll(".more-tab");
+  tabs.forEach((t) => t.classList.remove("is-active"));
+  const first = document.querySelector('.more-tab[data-target="moreDetail"]');
+  if (first) {
+    first.classList.add("is-active");
+    first.setAttribute("aria-selected", "true");
+  }
+  document.querySelectorAll(".more-tab:not(.is-active)").forEach((t) => t.setAttribute("aria-selected", "false"));
+
+  moreLoadedSymbol = null;
+}
+
+async function fetchMoreData(symbol) {
+  if (MORE_CACHE.has(symbol)) return MORE_CACHE.get(symbol);
+
+  try {
+    const url = getMoreUrl(symbol);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    MORE_CACHE.set(symbol, json);
+    return json;
+  } catch {
+    return null;
+  }
+}
+
+function escapeHtml(s) {
+  return String(s)
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function renderMarkdownToHtml(md) {
+  // 最小：HTMLエスケープ + 改行を<br>（重いMarkdownパーサは入れない）
+  const safe = escapeHtml(md || "");
+  return safe.replaceAll("\n", "<br>");
+}
+
+function renderMoreBlocks(container, blocks) {
+  container.innerHTML = "";
+
+  if (!blocks || blocks.length === 0) {
+    container.innerHTML = `<p class="more-placeholder">（データなし）</p>`;
+    return;
+  }
+
+  blocks.forEach((b) => {
+    const title = b.title ? `<h4>${escapeHtml(b.title)}</h4>` : "";
+
+    if (b.type === "markdown") {
+      const html = renderMarkdownToHtml(b.content || "");
+      container.insertAdjacentHTML("beforeend", `${title}<p>${html}</p>`);
+      return;
+    }
+
+    if (b.type === "list") {
+      const items = Array.isArray(b.items) ? b.items : [];
+      const li = items.map((x) => `<li>${escapeHtml(x)}</li>`).join("");
+      container.insertAdjacentHTML("beforeend", `${title}<ul class="more-list">${li || ""}</ul>`);
+      if (!items.length) container.insertAdjacentHTML("beforeend", `<p class="more-placeholder">（データなし）</p>`);
+      return;
+    }
+
+    if (b.type === "table") {
+      const cols = Array.isArray(b.columns) ? b.columns : [];
+      const rows = Array.isArray(b.rows) ? b.rows : [];
+
+      const thead = cols.length
+        ? `<thead><tr>${cols.map((c) => `<th>${escapeHtml(c)}</th>`).join("")}</tr></thead>`
+        : "";
+
+      const tbody = rows.length
+        ? `<tbody>${rows
+            .map((r) => `<tr>${(Array.isArray(r) ? r : []).map((c) => `<td>${escapeHtml(c)}</td>`).join("")}</tr>`)
+            .join("")}</tbody>`
+        : `<tbody></tbody>`;
+
+      container.insertAdjacentHTML("beforeend", `${title}<table class="more-table">${thead}${tbody}</table>`);
+      if (!rows.length) container.insertAdjacentHTML("beforeend", `<p class="more-placeholder">（データなし）</p>`);
+      return;
+    }
+
+    if (b.type === "links") {
+      const items = Array.isArray(b.items) ? b.items : [];
+      const li = items
+        .filter((x) => x && x.url)
+        .map((x) => `<li><a href="${escapeHtml(x.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(x.label || x.url)}</a></li>`)
+        .join("");
+      container.insertAdjacentHTML("beforeend", `${title}<ul class="more-list">${li || ""}</ul>`);
+      if (!li) container.insertAdjacentHTML("beforeend", `<p class="more-placeholder">（データなし）</p>`);
+      return;
+    }
+  });
+}
+
+async function ensureMoreRenderedForCurrent() {
+  const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
+  if (!el) return;
+
+  const symbol = el.s;
+  if (moreLoadedSymbol === symbol) return;
+
+  const json = await fetchMoreData(symbol);
+
+  const detailEl = document.querySelector('[data-more-content="detail"]');
+  const materialsEl = document.querySelector('[data-more-content="materials"]');
+  const datasetEl = document.querySelector('[data-more-content="dataset"]');
+
+  if (!detailEl || !materialsEl || !datasetEl) return;
+
+  if (!json || !Array.isArray(json.sections)) {
+    detailEl.innerHTML = `<p class="more-placeholder">（データなし）</p>`;
+    materialsEl.innerHTML = `<p class="more-placeholder">（データなし）</p>`;
+    datasetEl.innerHTML = `<p class="more-placeholder">（データなし）</p>`;
+    moreLoadedSymbol = symbol;
+    return;
+  }
+
+  const byId = new Map(json.sections.map((s) => [s.id, s]));
+  renderMoreBlocks(detailEl, byId.get("detail")?.blocks || []);
+  renderMoreBlocks(materialsEl, byId.get("materials")?.blocks || []);
+  renderMoreBlocks(datasetEl, byId.get("dataset")?.blocks || []);
+
+  moreLoadedSymbol = symbol;
+}
+
+function activateMoreTab(targetId) {
+  const targets = ["moreDetail", "moreMaterials", "moreDataset"];
+
+  targets.forEach((id) => {
+    const d = document.getElementById(id);
+    if (d) d.open = (id === targetId);
+  });
+
+  const tabs = document.querySelectorAll(".more-tab");
+  tabs.forEach((t) => {
+    const active = t.dataset.target === targetId;
+    t.classList.toggle("is-active", active);
+    t.setAttribute("aria-selected", active ? "true" : "false");
+  });
+
+  // 開いたときにだけロード
+  ensureMoreRenderedForCurrent();
+}
+
+function setupMoreUI() {
+  // タブ
+  document.querySelectorAll(".more-tab").forEach((btn) => {
+    btn.addEventListener("click", () => activateMoreTab(btn.dataset.target));
+  });
+
+  // PC：details を開いたときだけロード
+  document.querySelectorAll(".more-accordion").forEach((d) => {
+    d.addEventListener("toggle", () => {
+      if (d.open) ensureMoreRenderedForCurrent();
+    });
+  });
+
+  // スマホ初期：詳細タブを開く（summary非表示なので）
+  if (window.matchMedia && window.matchMedia("(max-width: 768px)").matches) {
+    activateMoreTab("moreDetail");
+  }
+}
+
+// ===============================
 // 元素データ（1〜83）
 // ===============================
 const ELEMENTS_DATA = [
@@ -1883,6 +2088,35 @@ function setupPriceControls() {
   if (priceFromYearEl) priceFromYearEl.addEventListener("change", onYearChange);
   if (priceToYearEl) priceToYearEl.addEventListener("change", onYearChange);
 }
+function setupPriceRangeButtons() {
+  const buttons = document.querySelectorAll(".range-btn");
+  if (!buttons.length) return;
+
+  buttons.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      buttons.forEach((b) => b.classList.remove("is-active"));
+      btn.classList.add("is-active");
+
+      const now = new Date();
+      const currentYear = now.getFullYear();
+
+      const range = btn.dataset.range;
+      if (range === "1y") {
+        currentFromYear = currentYear - 1;
+        currentToYear = null;
+      } else if (range === "5y") {
+        currentFromYear = currentYear - 5;
+        currentToYear = null;
+      } else {
+        currentFromYear = null;
+        currentToYear = null;
+      }
+
+      const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
+      if (el) updatePriceChart(el);
+    });
+  });
+}
 
 // 価格データを JSON ファイルから読み込む
 function loadPriceData() {
@@ -1900,7 +2134,6 @@ function loadPriceData() {
     .then((json) => {
       PRICE_DATA = json;
 
-      setupYearSelectors();
       setupPriceControls();
 
       const el = ELEMENTS_DATA.find((e) => e.n === currentAtomicNumber);
@@ -2045,10 +2278,11 @@ function init() {
   initPriceChart();
   loadPriceData();
   setupPriceToggle();
+setupPriceRangeButtons();
 
   // スマホ用レイアウト調整
   setupMobileLayout();
-
+  setupMoreUI();
   selectElement(1);
   applyLanguage();
 }
@@ -2214,6 +2448,7 @@ function selectElement(atomicNumber, fromList) {
   textNoticeEl.textContent =
     extraText.notice ||
     "この元素に関する注意点や関連情報は今後追加していけます。";
+  resetMoreUI();
   updatePriceUI(el);
   updatePriceChart(el);
   updateActiveStates();
@@ -2330,10 +2565,14 @@ function updatePriceUI(el) {
     hideChartUI();
     return;
   }
+const { last, prev } = getLatestAndPrev(points);
 
-  const { last, prev } = getLatestAndPrev(points);
-  if (priceLatestEl) priceLatestEl.textContent = `${last.price.toLocaleString()} USD`;
-  if (priceMetaEl) {
+const unit = PRICE_UNIT_BY_SYMBOL[el.s] || "USD";
+if (priceLatestEl) {
+  priceLatestEl.textContent = `${last.price.toLocaleString()} ${unit}`;
+}
+
+if (priceMetaEl) {
     priceMetaEl.textContent = isMonthlySeries(points)
       ? `（${last.date}）`
       : `（${last.date} 年平均）`;
@@ -2435,8 +2674,8 @@ function updatePriceChart(el) {
   priceChart.update();
 
   if (priceMessageEl) {
-    priceMessageEl.textContent =
-      "この元素の価格データは IMF Primary Commodity Prices（月次／年平均, USドル建て）を元にしています。";
+priceMessageEl.textContent =
+  "この元素の価格データは IMF Primary Commodity Prices（月次／年平均）を元にしています。貴金属は将来的に日次データ対応予定です。";
   }
 }
 function getLatestAndPrev(points) {

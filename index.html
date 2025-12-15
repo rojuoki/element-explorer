@@ -162,14 +162,17 @@
                     <td colspan="2">
                       <div id="priceChartWrap" class="price-chart-wrap">
                         <div class="price-controls">
-                          粒度:
+                        
                           <select id="priceGranularity">
                             <option value="month" selected>月足</option>
                             <option value="year">年足（年平均）</option>
                           </select>
+<div class="price-range">
+  <button data-range="1y" class="range-btn">1年</button>
+  <button data-range="5y" class="range-btn">5年</button>
+  <button data-range="all" class="range-btn is-active">全期間</button>
+</div>
 
-                          開始年: <select id="priceFromYear"></select>
-                          終了年: <select id="priceToYear"></select>
                         </div>
 
                         <div class="price-chart-canvas">
@@ -211,6 +214,39 @@
                 <p id="textNotice">この元素に関する注意点や、関連する製品・教材の情報を今後追加していけます。</p>
               </div>
             </section>
+            <section class="more-section" aria-label="詳細データ">
+  <h3 class="section-title small">詳細データ</h3>
+
+  <!-- スマホ用タブ（PCでは非表示） -->
+  <div class="more-tabs" role="tablist" aria-label="詳細データのタブ">
+    <button class="more-tab is-active" type="button" data-target="moreDetail" role="tab" aria-selected="true">詳細</button>
+    <button class="more-tab" type="button" data-target="moreMaterials" role="tab" aria-selected="false">資源</button>
+    <button class="more-tab" type="button" data-target="moreDataset" role="tab" aria-selected="false">データ集</button>
+  </div>
+
+  <!-- PC：アコーディオン / スマホ：タブで制御（中身は共通） -->
+  <details id="moreDetail" class="more-accordion" data-section="detail">
+    <summary>詳細（読み物）</summary>
+    <div class="more-content" data-more-content="detail">
+      <p class="more-placeholder">（未読み込み）</p>
+    </div>
+  </details>
+
+  <details id="moreMaterials" class="more-accordion" data-section="materials">
+    <summary>材料・資源</summary>
+    <div class="more-content" data-more-content="materials">
+      <p class="more-placeholder">（未読み込み）</p>
+    </div>
+  </details>
+
+  <details id="moreDataset" class="more-accordion" data-section="dataset">
+    <summary>データ集</summary>
+    <div class="more-content" data-more-content="dataset">
+      <p class="more-placeholder">（未読み込み）</p>
+    </div>
+  </details>
+            </section>
+
           </section>
         </main>
       </div>

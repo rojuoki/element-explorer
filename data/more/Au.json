@@ -1,0 +1,32 @@
+{
+  "symbol": "Au",
+  "updated": "2025-12-14",
+  "sections": [
+    {
+      "id": "detail",
+      "title": "詳細（読み物）",
+      "blocks": [
+        { "type": "markdown", "title": "主な用途", "content": "（ここに文章）" }
+      ]
+    },
+    {
+      "id": "materials",
+      "title": "材料・資源",
+      "blocks": [
+        { "type": "list", "title": "主な合金・化合物例", "items": ["（例）"] }
+      ]
+    },
+    {
+      "id": "dataset",
+      "title": "データ集",
+      "blocks": [
+        {
+          "type": "table",
+          "title": "同位体",
+          "columns": ["同位体", "存在比", "半減期", "備考"],
+          "rows": [["Au-197", "100%", "-", "安定同位体"]]
+        }
+      ]
+    }
+  ]
+}
